@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LINE カウントダウン</title>
+    
+    <!-- 
+    SETUP INSTRUCTIONS:
+    1. Register your LIFF app at https://developers.line.biz/console/
+    2. Get your LIFF ID from the console
+    3. Replace "YOUR_LIFF_ID" in the JavaScript section with your actual LIFF ID
+    4. Deploy this file to a static hosting service (S3, Netlify, Vercel, etc.)
+    5. Set the LIFF endpoint URL to your deployed URL
+    6. Test in LINE app
+    
+    HOSTING HINT:
+    - Upload this single file to any static hosting service
+    - Ensure HTTPS is enabled (required for LIFF)
+    - No build process required
+    -->
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1e2151 0%, #2c325c 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            animation: fadeInScale 0.8s ease-out;
+        }
+        
+        @keyframes fadeInScale {
+            0% {
+                opacity: 0;
+                transform: scale(0.9) translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        .countdown-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .countdown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+        
+        .countdown-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .countdown-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .countdown-item {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .countdown-number {
+            font-family: 'Fira Code', monospace;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: #fff;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .countdown-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        .event-complete {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #ffeb3b;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 30px 0;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            font-weight: 700;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        input[type="datetime-local"],
+        input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #00c851, #00a541);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 200, 81, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #5a6268);
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 10px;
+            margin-top: 10px;
+            object-fit: cover;
+        }
+        
+        .controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 3;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        .error {
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        @media (max-width: 480px) {
+            .card {
+                margin: 10px;
+                padding: 20px;
+            }
+            
+            .countdown-number {
+                font-size: 2rem;
+            }
+            
+            .countdown-grid {
+                gap: 15px;
+            }
+            
+            .countdown-item {
+                padding: 15px 8px;
+            }
+        }
+        
+        @media (orientation: landscape) and (max-height: 600px) {
+            .countdown-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 10px;
+            }
+            
+            .countdown-number {
+                font-size: 1.8rem;
+            }
+            
+            .countdown-item {
+                padding: 10px 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <main class="card" id="setupForm">
+            <h1>🎯 イベントカウントダウン</h1>
+            
+            <div class="form-group">
+                <label for="eventDate">イベント日時:</label>
+                <input type="datetime-local" id="eventDate" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="bgImage">背景画像:</label>
+                <input type="file" id="bgImage" accept="image/*" required>
+                <img id="imagePreview" class="preview-image hidden" alt="プレビュー">
+            </div>
+            
+            <button class="btn" id="startCountdown">カウントダウン開始</button>
+            
+            <div id="errorMessage" class="error hidden"></div>
+        </main>
+        
+        <section class="countdown-page hidden" id="countdownPage">
+            <div class="countdown-overlay"></div>
+            
+            <div class="controls">
+                <button class="control-btn" id="editBtn" title="設定を編集">⚙️</button>
+                <button class="control-btn" id="shareBtn" title="シェア">📤</button>
+            </div>
+            
+            <div class="countdown-content">
+                <div class="countdown-grid" id="countdownGrid">
+                    <div class="countdown-item">
+                        <span class="countdown-number" id="days">00</span>
+                        <span class="countdown-label">日</span>
+                    </div>
+                    <div class="countdown-item">
+                        <span class="countdown-number" id="hours">00</span>
+                        <span class="countdown-label">時間</span>
+                    </div>
+                    <div class="countdown-item">
+                        <span class="countdown-number" id="minutes">00</span>
+                        <span class="countdown-label">分</span>
+                    </div>
+                    <div class="countdown-item">
+                        <span class="countdown-number" id="seconds">00</span>
+                        <span class="countdown-label">秒</span>
+                    </div>
+                </div>
+                
+                <div class="event-complete hidden" id="eventComplete">
+                    イベントが始まりました！
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <script>
+        class CountdownApp {
+            constructor() {
+                this.userId = null;
+                this.countdownInterval = null;
+                this.currentSettings = null;
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.initializeLiff();
+            }
+            
+            initializeElements() {
+                // Setup form elements
+                this.setupForm = document.getElementById('setupForm');
+                this.eventDateInput = document.getElementById('eventDate');
+                this.bgImageInput = document.getElementById('bgImage');
+                this.imagePreview = document.getElementById('imagePreview');
+                this.startBtn = document.getElementById('startCountdown');
+                this.errorMessage = document.getElementById('errorMessage');
+                
+                // Countdown page elements
+                this.countdownPage = document.getElementById('countdownPage');
+                this.countdownGrid = document.getElementById('countdownGrid');
+                this.eventComplete = document.getElementById('eventComplete');
+                this.editBtn = document.getElementById('editBtn');
+                this.shareBtn = document.getElementById('shareBtn');
+                
+                // Countdown display elements
+                this.daysEl = document.getElementById('days');
+                this.hoursEl = document.getElementById('hours');
+                this.minutesEl = document.getElementById('minutes');
+                this.secondsEl = document.getElementById('seconds');
+                
+                // Set default date (today + 3 days)
+                const defaultDate = new Date();
+                defaultDate.setDate(defaultDate.getDate() + 3);
+                this.eventDateInput.value = this.formatDatetimeLocal(defaultDate);
+            }
+            
+            bindEvents() {
+                this.bgImageInput.addEventListener('change', (e) => this.handleImageSelect(e));
+                this.startBtn.addEventListener('click', () => this.startCountdown());
+                this.editBtn.addEventListener('click', () => this.showSetupForm());
+                this.shareBtn.addEventListener('click', () => this.shareCountdown());
+            }
+            
+            async initializeLiff() {
+                try {
+                    await liff.init({ liffId: "YOUR_LIFF_ID" });
+                    
+                    if (liff.isLoggedIn()) {
+                        const profile = await liff.getProfile();
+                        this.userId = profile.userId;
+                        this.loadSavedSettings();
+                    } else {
+                        this.showError('LINEログインが必要です');
+                    }
+                } catch (error) {
+                    console.error('LIFF initialization failed:', error);
+                    this.showError('LIFF初期化に失敗しました。LINEアプリ内で開いてください。');
+                }
+            }
+            
+            handleImageSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                // Validate file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    this.showError('画像サイズは5MB以下にしてください');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.imagePreview.src = e.target.result;
+                    this.imagePreview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            startCountdown() {
+                const eventDate = new Date(this.eventDateInput.value);
+                const imageFile = this.bgImageInput.files[0];
+                
+                if (!this.eventDateInput.value) {
+                    this.showError('イベント日時を選択してください');
+                    return;
+                }
+                
+                if (!imageFile) {
+                    this.showError('背景画像を選択してください');
+                    return;
+                }
+                
+                if (eventDate <= new Date()) {
+                    this.showError('未来の日時を選択してください');
+                    return;
+                }
+                
+                // Save settings to localStorage
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const settings = {
+                        eventDate: this.eventDateInput.value,
+                        backgroundImage: e.target.result,
+                        timestamp: Date.now()
+                    };
+                    
+                    localStorage.setItem(`countdown_${this.userId}`, JSON.stringify(settings));
+                    this.currentSettings = settings;
+                    this.showCountdownPage();
+                };
+                reader.readAsDataURL(imageFile);
+            }
+            
+            loadSavedSettings() {
+                const saved = localStorage.getItem(`countdown_${this.userId}`);
+                if (saved) {
+                    try {
+                        this.currentSettings = JSON.parse(saved);
+                        const eventDate = new Date(this.currentSettings.eventDate);
+                        
+                        // Check if event is still in the future
+                        if (eventDate > new Date()) {
+                            this.showCountdownPage();
+                            return;
+                        }
+                    } catch (error) {
+                        console.error('Failed to load saved settings:', error);
+                    }
+                }
+                
+                this.showSetupForm();
+            }
+            
+            showSetupForm() {
+                this.setupForm.classList.remove('hidden');
+                this.countdownPage.classList.add('hidden');
+                this.clearCountdownInterval();
+                this.hideError();
+            }
+            
+            showCountdownPage() {
+                this.setupForm.classList.add('hidden');
+                this.countdownPage.classList.remove('hidden');
+                
+                // Set background image
+                this.countdownPage.style.backgroundImage = `url(${this.currentSettings.backgroundImage})`;
+                
+                this.startCountdownTimer();
+            }
+            
+            startCountdownTimer() {
+                this.clearCountdownInterval();
+                
+                const updateTimer = () => {
+                    const now = new Date().getTime();
+                    const eventTime = new Date(this.currentSettings.eventDate).getTime();
+                    const distance = eventTime - now;
+                    
+                    if (distance < 0) {
+                        this.showEventComplete();
+                        return;
+                    }
+                    
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    
+                    this.updateCountdownDisplay(days, hours, minutes, seconds);
+                };
+                
+                updateTimer(); // Initial call
+                this.countdownInterval = setInterval(updateTimer, 1000);
+            }
+            
+            updateCountdownDisplay(days, hours, minutes, seconds) {
+                this.daysEl.textContent = String(days).padStart(2, '0');
+                this.hoursEl.textContent = String(hours).padStart(2, '0');
+                this.minutesEl.textContent = String(minutes).padStart(2, '0');
+                this.secondsEl.textContent = String(seconds).padStart(2, '0');
+                
+                this.countdownGrid.classList.remove('hidden');
+                this.eventComplete.classList.add('hidden');
+            }
+            
+            showEventComplete() {
+                this.clearCountdownInterval();
+                this.countdownGrid.classList.add('hidden');
+                this.eventComplete.classList.remove('hidden');
+            }
+            
+            async shareCountdown() {
+                if (!liff.isApiAvailable('shareTargetPicker')) {
+                    this.showError('シェア機能が利用できません');
+                    return;
+                }
+                
+                try {
+                    const eventDate = new Date(this.currentSettings.eventDate);
+                    const now = new Date();
+                    const distance = eventDate - now;
+                    
+                    let timeString;
+                    if (distance <= 0) {
+                        timeString = 'イベントが始まりました！';
+                    } else {
+                        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                        timeString = `あと${days}日${hours}時間${minutes}分`;
+                    }
+                    
+                    const flexMessage = {
+                        type: 'flex',
+                        altText: `カウントダウン: ${timeString}`,
+                        contents: {
+                            type: 'bubble',
+                            hero: {
+                                type: 'image',
+                                url: this.currentSettings.backgroundImage,
+                                size: 'full',
+                                aspectRatio: '20:13',
+                                aspectMode: 'cover'
+                            },
+                            body: {
+                                type: 'box',
+                                layout: 'vertical',
+                                contents: [
+                                    {
+                                        type: 'text',
+                                        text: '🎯 イベントカウントダウン',
+                                        weight: 'bold',
+                                        size: 'xl'
+                                    },
+                                    {
+                                        type: 'text',
+                                        text: timeString,
+                                        size: 'lg',
+                                        color: '#00c851',
+                                        weight: 'bold',
+                                        margin: 'md'
+                                    }
+                                ]
+                            }
+                        }
+                    };
+                    
+                    await liff.shareTargetPicker([flexMessage]);
+                } catch (error) {
+                    console.error('Share failed:', error);
+                    this.showError('シェアに失敗しました');
+                }
+            }
+            
+            clearCountdownInterval() {
+                if (this.countdownInterval) {
+                    clearInterval(this.countdownInterval);
+                    this.countdownInterval = null;
+                }
+            }
+            
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.classList.remove('hidden');
+            }
+            
+            hideError() {
+                this.errorMessage.classList.add('hidden');
+            }
+            
+            formatDatetimeLocal(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return `${year}-${month}-${day}T${hours}:${minutes}`;
+            }
+        }
+        
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new CountdownApp();
+        });
+    </script>
+</body>
+</html>
