@@ -20,7 +20,8 @@
     - No build process required
     -->
     
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <style>
         * {
@@ -30,11 +31,27 @@
         }
         
         body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1e2151 0%, #2c325c 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             min-height: 100vh;
             overflow-x: hidden;
+            position: relative;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 200, 255, 0.2) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
         
         .container {
@@ -47,25 +64,32 @@
         }
         
         .card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.12),
+                0 2px 8px rgba(0, 0, 0, 0.08);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             text-align: center;
-            animation: fadeInScale 0.8s ease-out;
+            animation: fadeInScale 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 1;
         }
         
         @keyframes fadeInScale {
             0% {
                 opacity: 0;
-                transform: scale(0.9) translateY(20px);
+                transform: scale(0.95) translateY(30px);
+                filter: blur(10px);
             }
             100% {
                 opacity: 1;
                 transform: scale(1) translateY(0);
+                filter: blur(0);
             }
         }
         
@@ -109,40 +133,81 @@
         }
         
         .countdown-item {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 15px;
-            padding: 20px 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 24px 16px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .countdown-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        }
+        
+        .countdown-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 40px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
         }
         
         .countdown-number {
-            font-family: 'Fira Code', monospace;
-            font-size: 2.5rem;
+            font-family: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
+            font-size: 2.8rem;
             font-weight: 600;
             color: #fff;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            letter-spacing: -0.02em;
         }
         
         .countdown-label {
-            font-size: 0.9rem;
-            opacity: 0.9;
-            font-weight: 400;
+            font-size: 0.875rem;
+            opacity: 0.85;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
         
         .event-complete {
-            font-size: 1.8rem;
+            font-size: 2rem;
             font-weight: 700;
-            color: #ffeb3b;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-            margin: 30px 0;
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 4px 20px rgba(255, 215, 0, 0.3);
+            margin: 40px 0;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         
         h1 {
-            font-size: 1.8rem;
-            margin-bottom: 30px;
+            font-size: 2rem;
+            margin-bottom: 32px;
             font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: none;
         }
         
         .form-group {
@@ -152,38 +217,81 @@
         
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
+            margin-bottom: 10px;
+            font-weight: 500;
             font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.01em;
         }
         
         input[type="datetime-local"],
-        input[type="file"] {
+        input[type="file"],
+        input[type="text"] {
             width: 100%;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
+            padding: 14px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            color: white;
             font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        input[type="datetime-local"]:focus,
+        input[type="file"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+        
+        input[type="datetime-local"]::placeholder,
+        input[type="text"]::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
         
         .btn {
-            background: linear-gradient(45deg, #00c851, #00a541);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 25px;
+            padding: 16px 32px;
+            border-radius: 50px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px 5px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin: 12px 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
         }
         
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 200, 81, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+            background: linear-gradient(135deg, #7c8bf0 0%, #8a5cb8 100%);
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:active {
+            transform: translateY(-1px);
         }
         
         .btn-secondary {
@@ -212,24 +320,26 @@
         }
         
         .control-btn {
-            width: 50px;
-            height: 50px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            border: none;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             color: white;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
         }
         
         .control-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
         }
         
         .hidden {
@@ -278,20 +388,34 @@
                 padding: 10px 5px;
             }
         }
+        
+        .event-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: rgba(255, 255, 255, 0.95);
+            text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+            letter-spacing: 0.01em;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <main class="card" id="setupForm">
-            <h1>🎯 イベントカウントダウン</h1>
+            <h1><i class="fas fa-calendar-star"></i> イベントカウントダウン</h1>
             
             <div class="form-group">
-                <label for="eventDate">イベント日時:</label>
+                <label for="eventName"><i class="fas fa-tag"></i> イベント名:</label>
+                <input type="text" id="eventName" placeholder="例: 誕生日パーティー" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="eventDate"><i class="fas fa-clock"></i> イベント日時:</label>
                 <input type="datetime-local" id="eventDate" required>
             </div>
             
             <div class="form-group">
-                <label for="bgImage">背景画像:</label>
+                <label for="bgImage"><i class="fas fa-image"></i> 背景画像:</label>
                 <input type="file" id="bgImage" accept="image/*" required>
                 <img id="imagePreview" class="preview-image hidden" alt="プレビュー">
             </div>
@@ -310,6 +434,8 @@
             </div>
             
             <div class="countdown-content">
+                <h2 id="eventTitle" class="event-title"></h2>
+                
                 <div class="countdown-grid" id="countdownGrid">
                     <div class="countdown-item">
                         <span class="countdown-number" id="days">00</span>
@@ -330,7 +456,7 @@
                 </div>
                 
                 <div class="event-complete hidden" id="eventComplete">
-                    イベントが始まりました！
+                    <span id="eventCompleteText">イベントが始まりました！</span>
                 </div>
             </div>
         </section>
@@ -352,6 +478,7 @@
             initializeElements() {
                 // Setup form elements
                 this.setupForm = document.getElementById('setupForm');
+                this.eventNameInput = document.getElementById('eventName');
                 this.eventDateInput = document.getElementById('eventDate');
                 this.bgImageInput = document.getElementById('bgImage');
                 this.imagePreview = document.getElementById('imagePreview');
@@ -362,6 +489,8 @@
                 this.countdownPage = document.getElementById('countdownPage');
                 this.countdownGrid = document.getElementById('countdownGrid');
                 this.eventComplete = document.getElementById('eventComplete');
+                this.eventTitle = document.getElementById('eventTitle');
+                this.eventCompleteText = document.getElementById('eventCompleteText');
                 this.editBtn = document.getElementById('editBtn');
                 this.shareBtn = document.getElementById('shareBtn');
                 
@@ -420,8 +549,14 @@
             }
             
             startCountdown() {
+                const eventName = this.eventNameInput.value.trim();
                 const eventDate = new Date(this.eventDateInput.value);
                 const imageFile = this.bgImageInput.files[0];
+                
+                if (!eventName) {
+                    this.showError('イベント名を入力してください');
+                    return;
+                }
                 
                 if (!this.eventDateInput.value) {
                     this.showError('イベント日時を選択してください');
@@ -442,6 +577,7 @@
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const settings = {
+                        eventName: eventName,
                         eventDate: this.eventDateInput.value,
                         backgroundImage: e.target.result,
                         timestamp: Date.now()
@@ -479,6 +615,11 @@
                 this.countdownPage.classList.add('hidden');
                 this.clearCountdownInterval();
                 this.hideError();
+                
+                // Load current settings into form if available
+                if (this.currentSettings) {
+                    this.eventNameInput.value = this.currentSettings.eventName || '';
+                }
             }
             
             showCountdownPage() {
@@ -487,6 +628,9 @@
                 
                 // Set background image
                 this.countdownPage.style.backgroundImage = `url(${this.currentSettings.backgroundImage})`;
+                
+                // Set event title
+                this.eventTitle.textContent = this.currentSettings.eventName;
                 
                 this.startCountdownTimer();
             }
@@ -530,6 +674,9 @@
                 this.clearCountdownInterval();
                 this.countdownGrid.classList.add('hidden');
                 this.eventComplete.classList.remove('hidden');
+                
+                // Update complete message with event name
+                this.eventCompleteText.textContent = `${this.currentSettings.eventName}が始まりました！`;
             }
             
             async shareCountdown() {
@@ -555,7 +702,7 @@
                     
                     const flexMessage = {
                         type: 'flex',
-                        altText: `カウントダウン: ${timeString}`,
+                        altText: `${this.currentSettings.eventName}: ${timeString}`,
                         contents: {
                             type: 'bubble',
                             hero: {
@@ -571,15 +718,16 @@
                                 contents: [
                                     {
                                         type: 'text',
-                                        text: '🎯 イベントカウントダウン',
+                                        text: this.currentSettings.eventName,
                                         weight: 'bold',
-                                        size: 'xl'
+                                        size: 'xl',
+                                        color: '#667eea'
                                     },
                                     {
                                         type: 'text',
                                         text: timeString,
                                         size: 'lg',
-                                        color: '#00c851',
+                                        color: '#764ba2',
                                         weight: 'bold',
                                         margin: 'md'
                                     }
