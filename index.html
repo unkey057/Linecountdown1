@@ -542,20 +542,29 @@
             
             async initializeLiff() {
                 try {
+                    console.log('Initializing LIFF...');
                     await liff.init({ liffId: "2007738618-kePDJ6ez" });
+                    
+                    console.log('LIFF initialized successfully');
+                    console.log('LIFF ready state:', liff.isLoggedIn());
                     
                     if (liff.isLoggedIn()) {
                         // Get user profile
                         const profile = await liff.getProfile();
                         this.userId = profile.userId;
+                        console.log('User profile loaded:', profile.userId);
                         
                         // Get context (group/room/user)
                         const context = liff.getContext();
                         this.setContextInfo(context);
                         this.updateContextDisplay();
                         
-                        this.loadSavedSettings();
+                        // Small delay to ensure context is fully set
+                        setTimeout(() => {
+                            this.loadSavedSettings();
+                        }, 50);
                     } else {
+                        console.warn('User not logged in');
                         this.showError('LINEログインが必要です');
                     }
                 } catch (error) {
@@ -565,25 +574,28 @@
             }
             
             setContextInfo(context) {
-                if (context.type === 'group') {
+                console.log('Raw context from LIFF:', context);
+                
+                if (context && context.type === 'group' && context.groupId) {
                     this.contextId = context.groupId;
                     this.contextType = 'group';
                     this.contextInfo = 'グループ';
-                } else if (context.type === 'room') {
+                } else if (context && context.type === 'room' && context.roomId) {
                     this.contextId = context.roomId;
                     this.contextType = 'room';
                     this.contextInfo = '複数人トーク';
                 } else {
-                    // utou (user-to-user) or none
+                    // utou (user-to-user), none, or fallback to userId
                     this.contextId = this.userId;
                     this.contextType = 'user';
                     this.contextInfo = '個人トーク';
                 }
                 
-                console.log('Context Info:', {
+                console.log('Final Context Info:', {
                     type: this.contextType,
                     id: this.contextId,
-                    info: this.contextInfo
+                    info: this.contextInfo,
+                    storageKey: this.getStorageKey()
                 });
             }
             
@@ -594,7 +606,9 @@
             }
             
             getStorageKey() {
-                return `countdown_${this.contextType}_${this.contextId}`;
+                const key = `countdown_${this.contextType}_${this.contextId}`;
+                console.log('Storage key generated:', key);
+                return key;
             }
             
             clearAllContextData() {
@@ -674,7 +688,13 @@
                         timestamp: Date.now()
                     };
                     
-                    localStorage.setItem(this.getStorageKey(), JSON.stringify(settings));
+                    const storageKey = this.getStorageKey();
+                    localStorage.setItem(storageKey, JSON.stringify(settings));
+                    
+                    console.log('Settings saved:', {
+                        key: storageKey,
+                        settings: settings
+                    });
                     this.currentSettings = settings;
                     this.showCountdownPage();
                 };
@@ -682,20 +702,46 @@
             }
             
             loadSavedSettings() {
-                const saved = localStorage.getItem(this.getStorageKey());
+                // Ensure context is set before trying to load
+                if (!this.contextId || !this.contextType) {
+                    console.warn('Context not ready, delaying loadSavedSettings');
+                    setTimeout(() => this.loadSavedSettings(), 100);
+                    return;
+                }
+                
+                const storageKey = this.getStorageKey();
+                const saved = localStorage.getItem(storageKey);
+                
+                console.log('Loading saved settings:', {
+                    storageKey: storageKey,
+                    hasData: !!saved,
+                    data: saved
+                });
+                
                 if (saved) {
                     try {
                         this.currentSettings = JSON.parse(saved);
                         const eventDate = new Date(this.currentSettings.eventDate);
                         
+                        console.log('Loaded settings:', {
+                            eventName: this.currentSettings.eventName,
+                            eventDate: this.currentSettings.eventDate,
+                            isFuture: eventDate > new Date()
+                        });
+                        
                         // Check if event is still in the future
                         if (eventDate > new Date()) {
+                            console.log('Event is in future, showing countdown page');
                             this.showCountdownPage();
                             return;
+                        } else {
+                            console.log('Event has passed, showing setup form');
                         }
                     } catch (error) {
-                        console.error('Failed to load saved settings:', error);
+                        console.error('Failed to parse saved settings:', error);
                     }
+                } else {
+                    console.log('No saved data found, showing setup form');
                 }
                 
                 this.showSetupForm();
