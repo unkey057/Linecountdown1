@@ -696,6 +696,20 @@
             }
             
             getStorageKey() {
+                if (!this.contextType || !this.contextId) {
+                    console.error('Cannot generate storage key - context not ready:', {
+                        contextType: this.contextType,
+                        contextId: this.contextId
+                    });
+                    // Fallback to userId if available
+                    if (this.userId) {
+                        const fallbackKey = `countdown_user_${this.userId}`;
+                        console.log('Using fallback storage key:', fallbackKey);
+                        return fallbackKey;
+                    }
+                    throw new Error('Context and userId not available for storage key');
+                }
+                
                 const key = `countdown_${this.contextType}_${this.contextId}`;
                 console.log('Storage key generated:', key);
                 return key;
@@ -744,29 +758,59 @@
             }
             
             startCountdown() {
+                console.log('=== START COUNTDOWN CLICKED ===');
+                
+                // Check if context is ready
+                if (!this.contextId || !this.contextType) {
+                    console.error('Context not ready:', {
+                        contextId: this.contextId,
+                        contextType: this.contextType,
+                        userId: this.userId
+                    });
+                    this.showError('初期化中です。しばらくお待ちください。');
+                    return;
+                }
+                
                 const eventName = this.eventNameInput.value.trim();
                 const eventDate = new Date(this.eventDateInput.value);
                 const imageFile = this.bgImageInput.files[0];
                 
+                console.log('Form values:', {
+                    eventName: eventName,
+                    eventDate: this.eventDateInput.value,
+                    hasImageFile: !!imageFile,
+                    imageFileName: imageFile ? imageFile.name : 'none',
+                    imageFileSize: imageFile ? imageFile.size : 0
+                });
+                
                 if (!eventName) {
+                    console.log('Validation failed: No event name');
                     this.showError('イベント名を入力してください');
                     return;
                 }
                 
                 if (!this.eventDateInput.value) {
+                    console.log('Validation failed: No event date');
                     this.showError('イベント日時を選択してください');
                     return;
                 }
                 
                 if (!imageFile) {
+                    console.log('Validation failed: No image file');
                     this.showError('背景画像を選択してください');
                     return;
                 }
                 
                 if (eventDate <= new Date()) {
+                    console.log('Validation failed: Past date', {
+                        eventDate: eventDate,
+                        now: new Date()
+                    });
                     this.showError('未来の日時を選択してください');
                     return;
                 }
+                
+                console.log('All validations passed, processing image...');
                 
                 // Save settings to localStorage
                 const reader = new FileReader();
@@ -781,14 +825,26 @@
                     const storageKey = this.getStorageKey();
                     localStorage.setItem(storageKey, JSON.stringify(settings));
                     
-                    console.log('Settings saved:', {
+                    console.log('Settings saved successfully:', {
                         key: storageKey,
-                        settings: settings
+                        eventName: settings.eventName,
+                        eventDate: settings.eventDate,
+                        imageSize: settings.backgroundImage.length
                     });
+                    
                     this.currentSettings = settings;
+                    console.log('Calling showCountdownPage...');
                     this.showCountdownPage();
                 };
+                
+                reader.onerror = (error) => {
+                    console.error('FileReader error:', error);
+                    this.showError('画像の読み込みに失敗しました。');
+                };
+                
+                console.log('Starting to read image file...');
                 reader.readAsDataURL(imageFile);
+                console.log('=== END START COUNTDOWN ===');
             }
             
             loadSavedSettings() {
@@ -1018,8 +1074,19 @@
             }
             
             showError(message) {
-                this.errorMessage.textContent = message;
-                this.errorMessage.classList.remove('hidden');
+                console.log('Showing error:', message);
+                if (this.errorMessage) {
+                    this.errorMessage.textContent = message;
+                    this.errorMessage.classList.remove('hidden');
+                    
+                    // Auto-hide error after 5 seconds
+                    setTimeout(() => {
+                        this.hideError();
+                    }, 5000);
+                } else {
+                    console.error('Error message element not found');
+                    alert(message); // Fallback
+                }
             }
             
             hideError() {
