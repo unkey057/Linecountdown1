@@ -559,10 +559,13 @@
                         this.setContextInfo(context);
                         this.updateContextDisplay();
                         
+                        // Add test data for debugging (remove in production)
+                        this.addTestDataForDebugging();
+                        
                         // Small delay to ensure context is fully set
                         setTimeout(() => {
                             this.loadSavedSettings();
-                        }, 50);
+                        }, 100);
                     } else {
                         console.warn('User not logged in');
                         this.showError('LINEログインが必要です');
@@ -574,21 +577,27 @@
             }
             
             setContextInfo(context) {
+                console.log('=== CONTEXT DEBUG ===');
                 console.log('Raw context from LIFF:', context);
+                console.log('User ID available:', this.userId);
                 
+                // Enhanced fallback logic
                 if (context && context.type === 'group' && context.groupId) {
                     this.contextId = context.groupId;
                     this.contextType = 'group';
                     this.contextInfo = 'グループ';
+                    console.log('Context type: GROUP');
                 } else if (context && context.type === 'room' && context.roomId) {
                     this.contextId = context.roomId;
                     this.contextType = 'room';
                     this.contextInfo = '複数人トーク';
+                    console.log('Context type: ROOM');
                 } else {
-                    // utou (user-to-user), none, or fallback to userId
-                    this.contextId = this.userId;
+                    // Fallback to userId - this should always work
+                    this.contextId = this.userId || 'fallback_user';
                     this.contextType = 'user';
                     this.contextInfo = '個人トーク';
+                    console.log('Context type: USER (fallback)');
                 }
                 
                 console.log('Final Context Info:', {
@@ -597,6 +606,7 @@
                     info: this.contextInfo,
                     storageKey: this.getStorageKey()
                 });
+                console.log('=== END CONTEXT DEBUG ===');
             }
             
             updateContextDisplay() {
@@ -702,9 +712,15 @@
             }
             
             loadSavedSettings() {
+                console.log('=== LOAD SETTINGS DEBUG ===');
+                
                 // Ensure context is set before trying to load
                 if (!this.contextId || !this.contextType) {
-                    console.warn('Context not ready, delaying loadSavedSettings');
+                    console.warn('Context not ready, retrying in 100ms...', {
+                        contextId: this.contextId,
+                        contextType: this.contextType,
+                        userId: this.userId
+                    });
                     setTimeout(() => this.loadSavedSettings(), 100);
                     return;
                 }
@@ -712,64 +728,98 @@
                 const storageKey = this.getStorageKey();
                 const saved = localStorage.getItem(storageKey);
                 
+                // Also check for any existing countdown data (debugging)
+                const allKeys = Object.keys(localStorage).filter(key => key.startsWith('countdown_'));
+                console.log('All countdown keys in localStorage:', allKeys);
+                
                 console.log('Loading saved settings:', {
                     storageKey: storageKey,
                     hasData: !!saved,
-                    data: saved
+                    rawData: saved
                 });
                 
                 if (saved) {
                     try {
                         this.currentSettings = JSON.parse(saved);
                         const eventDate = new Date(this.currentSettings.eventDate);
+                        const now = new Date();
                         
-                        console.log('Loaded settings:', {
+                        console.log('Parsed settings successfully:', {
                             eventName: this.currentSettings.eventName,
                             eventDate: this.currentSettings.eventDate,
-                            isFuture: eventDate > new Date()
+                            parsedDate: eventDate,
+                            currentTime: now,
+                            isFuture: eventDate > now,
+                            timeDiff: eventDate - now
                         });
                         
                         // Check if event is still in the future
-                        if (eventDate > new Date()) {
-                            console.log('Event is in future, showing countdown page');
+                        if (eventDate > now) {
+                            console.log('✅ Event is in future, showing countdown page');
                             this.showCountdownPage();
                             return;
                         } else {
-                            console.log('Event has passed, showing setup form');
+                            console.log('❌ Event has passed, showing setup form');
                         }
                     } catch (error) {
-                        console.error('Failed to parse saved settings:', error);
+                        console.error('Failed to parse saved settings:', error, saved);
                     }
                 } else {
-                    console.log('No saved data found, showing setup form');
+                    console.log('No saved data found for key:', storageKey);
                 }
                 
+                console.log('Showing setup form...');
+                console.log('=== END LOAD SETTINGS DEBUG ===');
                 this.showSetupForm();
             }
             
             showSetupForm() {
+                console.log('=== SHOW SETUP FORM ===');
+                console.log('Showing setup form, hiding countdown page');
+                
                 this.setupForm.classList.remove('hidden');
                 this.countdownPage.classList.add('hidden');
                 this.clearCountdownInterval();
                 this.hideError();
                 
                 // Load current settings into form if available
-                if (this.currentSettings) {
+                if (this.currentSettings && this.eventNameInput) {
                     this.eventNameInput.value = this.currentSettings.eventName || '';
+                    console.log('Pre-filled event name:', this.currentSettings.eventName);
                 }
+                
+                console.log('=== END SHOW SETUP FORM ===');
             }
             
             showCountdownPage() {
+                console.log('=== SHOW COUNTDOWN PAGE ===');
+                console.log('Current settings:', this.currentSettings);
+                
+                if (!this.currentSettings) {
+                    console.error('No current settings available!');
+                    this.showSetupForm();
+                    return;
+                }
+                
+                console.log('Hiding setup form, showing countdown page');
                 this.setupForm.classList.add('hidden');
                 this.countdownPage.classList.remove('hidden');
                 
                 // Set background image
-                this.countdownPage.style.backgroundImage = `url(${this.currentSettings.backgroundImage})`;
+                if (this.currentSettings.backgroundImage) {
+                    this.countdownPage.style.backgroundImage = `url(${this.currentSettings.backgroundImage})`;
+                    console.log('Background image set');
+                }
                 
                 // Set event title
-                this.eventTitle.textContent = this.currentSettings.eventName;
+                if (this.eventTitle && this.currentSettings.eventName) {
+                    this.eventTitle.textContent = this.currentSettings.eventName;
+                    console.log('Event title set:', this.currentSettings.eventName);
+                }
                 
+                console.log('Starting countdown timer...');
                 this.startCountdownTimer();
+                console.log('=== END SHOW COUNTDOWN PAGE ===');
             }
             
             startCountdownTimer() {
@@ -905,11 +955,14 @@
                 
                 return `${year}-${month}-${day}T${hours}:${minutes}`;
             }
+            
+            // Debug helper function
+            addTestDataForDebugging() {\n                console.log('=== DEBUG HELPER ===');\n                \n                // Check if we can manually create test data\n                const testKey = `countdown_user_${this.userId}`;\n                const testData = {\n                    eventName: 'テストイベント',\n                    eventDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16), // 24 hours from now\n                    backgroundImage: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VGVzdDwvdGV4dD48L3N2Zz4=',\n                    timestamp: Date.now()\n                };\n                \n                // Only add test data if no data exists\n                if (!localStorage.getItem(testKey)) {\n                    console.log('Creating test data for debugging:', testKey, testData);\n                    localStorage.setItem(testKey, JSON.stringify(testData));\n                } else {\n                    console.log('Test data already exists');\n                }\n                \n                console.log('=== END DEBUG HELPER ===');\n            }\n            \n            // Manual debug functions (call from browser console)\n            debugLocalStorage() {\n                const keys = Object.keys(localStorage).filter(key => key.startsWith('countdown_'));\n                console.log('All countdown data:');\n                keys.forEach(key => {\n                    console.log(`${key}:`, JSON.parse(localStorage.getItem(key)));\n                });\n            }\n            \n            forceShowCountdown() {\n                console.log('Forcing countdown display...');\n                if (this.currentSettings) {\n                    this.showCountdownPage();\n                } else {\n                    console.log('No current settings available');\n                }\n            }
         }
         
         // Initialize app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
-            new CountdownApp();
+            window.countdownApp = new CountdownApp();
         });
     </script>
 </body>
