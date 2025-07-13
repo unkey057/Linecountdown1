@@ -414,69 +414,6 @@
         .context-info i {
             opacity: 0.6;
         }
-        
-        .debug-panel {
-            background: rgba(255, 87, 87, 0.1);
-            border: 1px solid rgba(255, 87, 87, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 24px;
-            font-size: 0.8rem;
-        }
-        
-        .debug-panel h3 {
-            margin-bottom: 12px;
-            font-size: 1rem;
-            color: #ff5757;
-        }
-        
-        .debug-info {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 8px;
-            border-radius: 6px;
-            margin-bottom: 12px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            max-height: 200px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        
-        .debug-controls {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-        
-        .btn-debug {
-            font-size: 0.8rem;
-            padding: 8px 16px;
-            background: linear-gradient(45deg, #ff5757, #ff6b6b);
-        }
-        
-        .toggle-debug {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 87, 87, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-size: 1.2rem;
-            z-index: 1000;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 87, 87, 0.3);
-        }
-        
-        .toggle-debug:hover {
-            background: rgba(255, 87, 87, 0.3);
-            transform: scale(1.1);
-        }
     </style>
 </head>
 <body>
@@ -487,21 +424,6 @@
             <div class="context-info" id="contextInfo">
                 <i class="fas fa-info-circle"></i>
                 <span id="contextText">読み込み中...</span>
-            </div>
-            
-            <div class="debug-panel" id="debugPanel" style="display: none;">
-                <h3>🔧 デバッグパネル</h3>
-                <div class="debug-info" id="debugInfo"></div>
-                <div class="debug-controls">
-                    <button class="btn btn-debug" onclick="countdownApp.showDebugInfo()">デバッグ情報表示</button>
-                    <button class="btn btn-debug" onclick="countdownApp.createTestData()">テストデータ作成</button>
-                    <button class="btn btn-debug" onclick="countdownApp.clearAllData()">全データ削除</button>
-                </div>
-                <button class="btn btn-secondary" onclick="document.getElementById('debugPanel').style.display='none'">閉じる</button>
-            </div>
-            
-            <div class="toggle-debug" onclick="document.getElementById('debugPanel').style.display='block'" title="デバッグパネルを開く">
-                🔧
             </div>
             
             <div class="form-group">
@@ -589,8 +511,6 @@
                 this.errorMessage = document.getElementById('errorMessage');
                 this.contextInfo = document.getElementById('contextInfo');
                 this.contextText = document.getElementById('contextText');
-                this.debugPanel = document.getElementById('debugPanel');
-                this.debugInfo = document.getElementById('debugInfo');
                 
                 // Countdown page elements
                 this.countdownPage = document.getElementById('countdownPage');
@@ -622,32 +542,20 @@
             
             async initializeLiff() {
                 try {
-                    console.log('Initializing LIFF...');
                     await liff.init({ liffId: "2007738618-kePDJ6ez" });
-                    
-                    console.log('LIFF initialized successfully');
-                    console.log('LIFF ready state:', liff.isLoggedIn());
                     
                     if (liff.isLoggedIn()) {
                         // Get user profile
                         const profile = await liff.getProfile();
                         this.userId = profile.userId;
-                        console.log('User profile loaded:', profile.userId);
                         
                         // Get context (group/room/user)
                         const context = liff.getContext();
                         this.setContextInfo(context);
                         this.updateContextDisplay();
                         
-                        // Add test data for debugging (remove in production)
-                        this.addTestDataForDebugging();
-                        
-                        // Small delay to ensure context is fully set
-                        setTimeout(() => {
-                            this.loadSavedSettings();
-                        }, 100);
+                        this.loadSavedSettings();
                     } else {
-                        console.warn('User not logged in');
                         this.showError('LINEログインが必要です');
                     }
                 } catch (error) {
@@ -657,36 +565,26 @@
             }
             
             setContextInfo(context) {
-                console.log('=== CONTEXT DEBUG ===');
-                console.log('Raw context from LIFF:', context);
-                console.log('User ID available:', this.userId);
-                
-                // Enhanced fallback logic
-                if (context && context.type === 'group' && context.groupId) {
+                if (context.type === 'group') {
                     this.contextId = context.groupId;
                     this.contextType = 'group';
                     this.contextInfo = 'グループ';
-                    console.log('Context type: GROUP');
-                } else if (context && context.type === 'room' && context.roomId) {
+                } else if (context.type === 'room') {
                     this.contextId = context.roomId;
                     this.contextType = 'room';
                     this.contextInfo = '複数人トーク';
-                    console.log('Context type: ROOM');
                 } else {
-                    // Fallback to userId - this should always work
-                    this.contextId = this.userId || 'fallback_user';
+                    // utou (user-to-user) or none
+                    this.contextId = this.userId;
                     this.contextType = 'user';
                     this.contextInfo = '個人トーク';
-                    console.log('Context type: USER (fallback)');
                 }
                 
-                console.log('Final Context Info:', {
+                console.log('Context Info:', {
                     type: this.contextType,
                     id: this.contextId,
-                    info: this.contextInfo,
-                    storageKey: this.getStorageKey()
+                    info: this.contextInfo
                 });
-                console.log('=== END CONTEXT DEBUG ===');
             }
             
             updateContextDisplay() {
@@ -696,23 +594,7 @@
             }
             
             getStorageKey() {
-                if (!this.contextType || !this.contextId) {
-                    console.error('Cannot generate storage key - context not ready:', {
-                        contextType: this.contextType,
-                        contextId: this.contextId
-                    });
-                    // Fallback to userId if available
-                    if (this.userId) {
-                        const fallbackKey = `countdown_user_${this.userId}`;
-                        console.log('Using fallback storage key:', fallbackKey);
-                        return fallbackKey;
-                    }
-                    throw new Error('Context and userId not available for storage key');
-                }
-                
-                const key = `countdown_${this.contextType}_${this.contextId}`;
-                console.log('Storage key generated:', key);
-                return key;
+                return `countdown_${this.contextType}_${this.contextId}`;
             }
             
             clearAllContextData() {
@@ -758,59 +640,29 @@
             }
             
             startCountdown() {
-                console.log('=== START COUNTDOWN CLICKED ===');
-                
-                // Check if context is ready
-                if (!this.contextId || !this.contextType) {
-                    console.error('Context not ready:', {
-                        contextId: this.contextId,
-                        contextType: this.contextType,
-                        userId: this.userId
-                    });
-                    this.showError('初期化中です。しばらくお待ちください。');
-                    return;
-                }
-                
                 const eventName = this.eventNameInput.value.trim();
                 const eventDate = new Date(this.eventDateInput.value);
                 const imageFile = this.bgImageInput.files[0];
                 
-                console.log('Form values:', {
-                    eventName: eventName,
-                    eventDate: this.eventDateInput.value,
-                    hasImageFile: !!imageFile,
-                    imageFileName: imageFile ? imageFile.name : 'none',
-                    imageFileSize: imageFile ? imageFile.size : 0
-                });
-                
                 if (!eventName) {
-                    console.log('Validation failed: No event name');
                     this.showError('イベント名を入力してください');
                     return;
                 }
                 
                 if (!this.eventDateInput.value) {
-                    console.log('Validation failed: No event date');
                     this.showError('イベント日時を選択してください');
                     return;
                 }
                 
                 if (!imageFile) {
-                    console.log('Validation failed: No image file');
                     this.showError('背景画像を選択してください');
                     return;
                 }
                 
                 if (eventDate <= new Date()) {
-                    console.log('Validation failed: Past date', {
-                        eventDate: eventDate,
-                        now: new Date()
-                    });
                     this.showError('未来の日時を選択してください');
                     return;
                 }
-                
-                console.log('All validations passed, processing image...');
                 
                 // Save settings to localStorage
                 const reader = new FileReader();
@@ -822,140 +674,56 @@
                         timestamp: Date.now()
                     };
                     
-                    const storageKey = this.getStorageKey();
-                    localStorage.setItem(storageKey, JSON.stringify(settings));
-                    
-                    console.log('Settings saved successfully:', {
-                        key: storageKey,
-                        eventName: settings.eventName,
-                        eventDate: settings.eventDate,
-                        imageSize: settings.backgroundImage.length
-                    });
-                    
+                    localStorage.setItem(this.getStorageKey(), JSON.stringify(settings));
                     this.currentSettings = settings;
-                    console.log('Calling showCountdownPage...');
                     this.showCountdownPage();
                 };
-                
-                reader.onerror = (error) => {
-                    console.error('FileReader error:', error);
-                    this.showError('画像の読み込みに失敗しました。');
-                };
-                
-                console.log('Starting to read image file...');
                 reader.readAsDataURL(imageFile);
-                console.log('=== END START COUNTDOWN ===');
             }
             
             loadSavedSettings() {
-                console.log('=== LOAD SETTINGS DEBUG ===');
-                
-                // Ensure context is set before trying to load
-                if (!this.contextId || !this.contextType) {
-                    console.warn('Context not ready, retrying in 100ms...', {
-                        contextId: this.contextId,
-                        contextType: this.contextType,
-                        userId: this.userId
-                    });
-                    setTimeout(() => this.loadSavedSettings(), 100);
-                    return;
-                }
-                
-                const storageKey = this.getStorageKey();
-                const saved = localStorage.getItem(storageKey);
-                
-                // Also check for any existing countdown data (debugging)
-                const allKeys = Object.keys(localStorage).filter(key => key.startsWith('countdown_'));
-                console.log('All countdown keys in localStorage:', allKeys);
-                
-                console.log('Loading saved settings:', {
-                    storageKey: storageKey,
-                    hasData: !!saved,
-                    rawData: saved
-                });
-                
+                const saved = localStorage.getItem(this.getStorageKey());
                 if (saved) {
                     try {
                         this.currentSettings = JSON.parse(saved);
                         const eventDate = new Date(this.currentSettings.eventDate);
-                        const now = new Date();
-                        
-                        console.log('Parsed settings successfully:', {
-                            eventName: this.currentSettings.eventName,
-                            eventDate: this.currentSettings.eventDate,
-                            parsedDate: eventDate,
-                            currentTime: now,
-                            isFuture: eventDate > now,
-                            timeDiff: eventDate - now
-                        });
                         
                         // Check if event is still in the future
-                        if (eventDate > now) {
-                            console.log('✅ Event is in future, showing countdown page');
+                        if (eventDate > new Date()) {
                             this.showCountdownPage();
                             return;
-                        } else {
-                            console.log('❌ Event has passed, showing setup form');
                         }
                     } catch (error) {
-                        console.error('Failed to parse saved settings:', error, saved);
+                        console.error('Failed to load saved settings:', error);
                     }
-                } else {
-                    console.log('No saved data found for key:', storageKey);
                 }
                 
-                console.log('Showing setup form...');
-                console.log('=== END LOAD SETTINGS DEBUG ===');
                 this.showSetupForm();
             }
             
             showSetupForm() {
-                console.log('=== SHOW SETUP FORM ===');
-                console.log('Showing setup form, hiding countdown page');
-                
                 this.setupForm.classList.remove('hidden');
                 this.countdownPage.classList.add('hidden');
                 this.clearCountdownInterval();
                 this.hideError();
                 
                 // Load current settings into form if available
-                if (this.currentSettings && this.eventNameInput) {
+                if (this.currentSettings) {
                     this.eventNameInput.value = this.currentSettings.eventName || '';
-                    console.log('Pre-filled event name:', this.currentSettings.eventName);
                 }
-                
-                console.log('=== END SHOW SETUP FORM ===');
             }
             
             showCountdownPage() {
-                console.log('=== SHOW COUNTDOWN PAGE ===');
-                console.log('Current settings:', this.currentSettings);
-                
-                if (!this.currentSettings) {
-                    console.error('No current settings available!');
-                    this.showSetupForm();
-                    return;
-                }
-                
-                console.log('Hiding setup form, showing countdown page');
                 this.setupForm.classList.add('hidden');
                 this.countdownPage.classList.remove('hidden');
                 
                 // Set background image
-                if (this.currentSettings.backgroundImage) {
-                    this.countdownPage.style.backgroundImage = `url(${this.currentSettings.backgroundImage})`;
-                    console.log('Background image set');
-                }
+                this.countdownPage.style.backgroundImage = `url(${this.currentSettings.backgroundImage})`;
                 
                 // Set event title
-                if (this.eventTitle && this.currentSettings.eventName) {
-                    this.eventTitle.textContent = this.currentSettings.eventName;
-                    console.log('Event title set:', this.currentSettings.eventName);
-                }
+                this.eventTitle.textContent = this.currentSettings.eventName;
                 
-                console.log('Starting countdown timer...');
                 this.startCountdownTimer();
-                console.log('=== END SHOW COUNTDOWN PAGE ===');
             }
             
             startCountdownTimer() {
@@ -1074,19 +842,8 @@
             }
             
             showError(message) {
-                console.log('Showing error:', message);
-                if (this.errorMessage) {
-                    this.errorMessage.textContent = message;
-                    this.errorMessage.classList.remove('hidden');
-                    
-                    // Auto-hide error after 5 seconds
-                    setTimeout(() => {
-                        this.hideError();
-                    }, 5000);
-                } else {
-                    console.error('Error message element not found');
-                    alert(message); // Fallback
-                }
+                this.errorMessage.textContent = message;
+                this.errorMessage.classList.remove('hidden');
             }
             
             hideError() {
@@ -1102,47 +859,11 @@
                 
                 return `${year}-${month}-${day}T${hours}:${minutes}`;
             }
-            
-            // Debug helper function
-            addTestDataForDebugging() {\n                console.log('=== DEBUG HELPER ===');\n                \n                // Check if we can manually create test data\n                const testKey = `countdown_user_${this.userId}`;\n                const testData = {\n                    eventName: 'テストイベント',\n                    eventDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16), // 24 hours from now\n                    backgroundImage: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VGVzdDwvdGV4dD48L3N2Zz4=',\n                    timestamp: Date.now()\n                };\n                \n                // Only add test data if no data exists\n                if (!localStorage.getItem(testKey)) {\n                    console.log('Creating test data for debugging:', testKey, testData);\n                    localStorage.setItem(testKey, JSON.stringify(testData));\n                } else {\n                    console.log('Test data already exists');\n                }\n                \n                console.log('=== END DEBUG HELPER ===');\n            }\n            \n            // Manual debug functions (call from browser console)\n            debugLocalStorage() {\n                const keys = Object.keys(localStorage).filter(key => key.startsWith('countdown_'));\n                console.log('All countdown data:');\n                keys.forEach(key => {\n                    console.log(`${key}:`, JSON.parse(localStorage.getItem(key)));\n                });\n            }\n            \n            forceShowCountdown() {\n                console.log('Forcing countdown display...');\n                if (this.currentSettings) {\n                    this.showCountdownPage();\n                } else {\n                    console.log('No current settings available');\n                }\n            }
-            
-            // UI Debug functions
-            showDebugInfo() {
-                const debugInfo = document.getElementById('debugInfo');
-                if (!debugInfo) return;
-                
-                const info = {
-                    'User ID': this.userId,
-                    'Context Type': this.contextType,
-                    'Context ID': this.contextId,
-                    'Context Info': this.contextInfo,
-                    'Storage Key': this.getStorageKey(),
-                    'Current Settings': this.currentSettings,
-                    'LIFF Available': typeof liff !== 'undefined',
-                    'LIFF Logged In': typeof liff !== 'undefined' ? liff.isLoggedIn() : false,
-                    'LocalStorage Keys': Object.keys(localStorage).filter(k => k.startsWith('countdown_'))
-                };
-                
-                debugInfo.textContent = JSON.stringify(info, null, 2);
-            }
-            
-            createTestData() {
-                this.addTestDataForDebugging();
-                alert('テストデータを作成しました。ページをリロードしてください。');
-                location.reload();
-            }
-            
-            clearAllData() {
-                const keys = Object.keys(localStorage).filter(k => k.startsWith('countdown_'));
-                keys.forEach(key => localStorage.removeItem(key));
-                alert(`${keys.length}件のデータを削除しました。`);
-                location.reload();
-            }
         }
         
         // Initialize app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
-            window.countdownApp = new CountdownApp();
+            new CountdownApp();
         });
     </script>
 </body>
