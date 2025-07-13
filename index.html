@@ -317,6 +317,7 @@
             z-index: 3;
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
         
         .control-btn {
@@ -451,6 +452,8 @@
             <div class="countdown-overlay"></div>
             
             <div class="controls">
+                <button class="control-btn" id="pauseBtn" title="一時停止/再開">⏸️</button>
+                <button class="control-btn" id="resetBtn" title="リセット">🔄</button>
                 <button class="control-btn" id="editBtn" title="設定を編集">⚙️</button>
                 <button class="control-btn" id="shareBtn" title="シェア">📤</button>
             </div>
@@ -494,6 +497,9 @@
                 this.contextInfo = null;
                 this.countdownInterval = null;
                 this.currentSettings = null;
+                this.isPaused = false;
+                this.pausedTime = null;
+                this.pausedTimestamp = null;
                 
                 this.initializeElements();
                 this.bindEvents();
@@ -518,6 +524,8 @@
                 this.eventComplete = document.getElementById('eventComplete');
                 this.eventTitle = document.getElementById('eventTitle');
                 this.eventCompleteText = document.getElementById('eventCompleteText');
+                this.pauseBtn = document.getElementById('pauseBtn');
+                this.resetBtn = document.getElementById('resetBtn');
                 this.editBtn = document.getElementById('editBtn');
                 this.shareBtn = document.getElementById('shareBtn');
                 
@@ -536,6 +544,8 @@
             bindEvents() {
                 this.bgImageInput.addEventListener('change', (e) => this.handleImageSelect(e));
                 this.startBtn.addEventListener('click', () => this.startCountdown());
+                this.pauseBtn.addEventListener('click', () => this.togglePause());
+                this.resetBtn.addEventListener('click', () => this.resetCountdown());
                 this.editBtn.addEventListener('click', () => this.showSetupForm());
                 this.shareBtn.addEventListener('click', () => this.shareCountdown());
             }
@@ -671,7 +681,11 @@
                         eventName: eventName,
                         eventDate: this.eventDateInput.value,
                         backgroundImage: e.target.result,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        isPaused: false,
+                        pausedTime: null,
+                        pausedTimestamp: null,
+                        isActive: true
                     };
                     
                     localStorage.setItem(this.getStorageKey(), JSON.stringify(settings));
@@ -690,6 +704,10 @@
                         
                         // Check if event is still in the future
                         if (eventDate > new Date()) {
+                            // Restore paused state
+                            this.isPaused = this.currentSettings.isPaused || false;
+                            this.pausedTime = this.currentSettings.pausedTime || null;
+                            this.pausedTimestamp = this.currentSettings.pausedTimestamp || null;
                             this.showCountdownPage();
                             return;
                         }
@@ -710,7 +728,17 @@
                 // Load current settings into form if available
                 if (this.currentSettings) {
                     this.eventNameInput.value = this.currentSettings.eventName || '';
+                    this.eventDateInput.value = this.currentSettings.eventDate || '';
+                    if (this.currentSettings.backgroundImage) {
+                        this.imagePreview.src = this.currentSettings.backgroundImage;
+                        this.imagePreview.classList.remove('hidden');
+                    }
                 }
+                
+                // Reset pause state
+                this.isPaused = false;
+                this.pausedTime = null;
+                this.pausedTimestamp = null;
             }
             
             showCountdownPage() {
@@ -723,6 +751,7 @@
                 // Set event title
                 this.eventTitle.textContent = this.currentSettings.eventName;
                 
+                this.updatePauseButtonState();
                 this.startCountdownTimer();
             }
             
@@ -730,9 +759,29 @@
                 this.clearCountdownInterval();
                 
                 const updateTimer = () => {
+                    if (this.isPaused) {
+                        // Display paused time
+                        if (this.pausedTime) {
+                            const days = Math.floor(this.pausedTime / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor((this.pausedTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const minutes = Math.floor((this.pausedTime % (1000 * 60 * 60)) / (1000 * 60));
+                            const seconds = Math.floor((this.pausedTime % (1000 * 60)) / 1000);
+                            this.updateCountdownDisplay(days, hours, minutes, seconds);
+                        }
+                        return;
+                    }
+                    
                     const now = new Date().getTime();
                     const eventTime = new Date(this.currentSettings.eventDate).getTime();
-                    const distance = eventTime - now;
+                    let distance;
+                    
+                    if (this.pausedTime && this.pausedTimestamp) {
+                        // Calculate remaining time from when we resumed
+                        const resumeOffset = now - this.pausedTimestamp;
+                        distance = this.pausedTime - resumeOffset;
+                    } else {
+                        distance = eventTime - now;
+                    }
                     
                     if (distance < 0) {
                         this.showEventComplete();
@@ -834,6 +883,66 @@
                 }
             }
             
+            togglePause() {
+                this.isPaused = !this.isPaused;
+                
+                if (this.isPaused) {
+                    // Calculate current remaining time
+                    const now = new Date().getTime();
+                    const eventTime = new Date(this.currentSettings.eventDate).getTime();
+                    
+                    if (this.pausedTime && this.pausedTimestamp) {
+                        // Already had paused time, calculate from resume point
+                        const resumeOffset = now - this.pausedTimestamp;
+                        this.pausedTime = this.pausedTime - resumeOffset;
+                    } else {
+                        // First time pausing
+                        this.pausedTime = eventTime - now;
+                    }
+                    
+                    this.pausedTimestamp = null;
+                } else {
+                    // Resume: set timestamp for when we resumed
+                    this.pausedTimestamp = new Date().getTime();
+                }
+                
+                this.updatePauseButtonState();
+                this.saveCurrentState();
+            }
+            
+            resetCountdown() {
+                if (confirm('カウントダウンをリセットしますか？')) {
+                    this.isPaused = false;
+                    this.pausedTime = null;
+                    this.pausedTimestamp = null;
+                    this.updatePauseButtonState();
+                    this.saveCurrentState();
+                    this.startCountdownTimer();
+                }
+            }
+            
+            updatePauseButtonState() {
+                if (this.pauseBtn) {
+                    this.pauseBtn.textContent = this.isPaused ? '▶️' : '⏸️';
+                    this.pauseBtn.title = this.isPaused ? '再開' : '一時停止';
+                }
+            }
+            
+            saveCurrentState() {
+                if (this.currentSettings) {
+                    const updatedSettings = {
+                        ...this.currentSettings,
+                        isPaused: this.isPaused,
+                        pausedTime: this.pausedTime,
+                        pausedTimestamp: this.pausedTimestamp,
+                        lastSaved: Date.now()
+                    };
+                    
+                    localStorage.setItem(this.getStorageKey(), JSON.stringify(updatedSettings));
+                    this.currentSettings = updatedSettings;
+                }
+            }
+            
             clearCountdownInterval() {
                 if (this.countdownInterval) {
                     clearInterval(this.countdownInterval);
@@ -859,11 +968,21 @@
                 
                 return `${year}-${month}-${day}T${hours}:${minutes}`;
             }
+            
+            // Auto-save state every 10 seconds when countdown is active
+            startAutoSave() {
+                setInterval(() => {
+                    if (this.currentSettings && this.countdownPage && !this.countdownPage.classList.contains('hidden')) {
+                        this.saveCurrentState();
+                    }
+                }, 10000);
+            }
         }
         
         // Initialize app when DOM is loaded
         document.addEventListener('DOMContentLoaded', () => {
-            new CountdownApp();
+            const app = new CountdownApp();
+            app.startAutoSave();
         });
     </script>
 </body>

@@ -3,7 +3,7 @@
 LINEのLIFF (LINE Front-end Framework) を使用したリアルタイムカウントダウンアプリです。グループごとに異なるイベントを設定でき、美しいグラデーション背景とともにカウントダウンを表示します。
 
 ![App Screenshot](https://img.shields.io/badge/Platform-LINE%20LIFF-00C300?style=for-the-badge&logo=line)
-![Version](https://img.shields.io/badge/Version-2.0-blue?style=for-the-badge)
+![Version](https://img.shields.io/badge/Version-2.1-blue?style=for-the-badge)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-success?style=for-the-badge)
 
 ## ✨ 主な機能
@@ -26,8 +26,11 @@ LINEのLIFF (LINE Front-end Framework) を使用したリアルタイムカウ�
 - **複数人トーク**専用イベント
 - 各トークで**独立したイベント管理**
 
-### 🔄 その他機能
-- **データ永続化**（localStorage）
+### 🔄 高度な制御機能
+- **一時停止/再開**機能（⏸️/▶️ボタン）
+- **リセット機能**（🔄ボタン）
+- **完全な状態永続化**（アプリ再起動対応）
+- **自動保存**（10秒間隔）
 - **LINEシェア機能**（Flex Message）
 - **設定編集**機能
 - **エラーハンドリング**
@@ -101,9 +104,17 @@ git push -u origin main
 
 ### 操作方法
 
-- **⚙️ 設定編集**: 右上の歯車アイコン
-- **📤 シェア**: 右上のシェアアイコンでFlex Message送信
-- **🔄 再設定**: 設定画面でイベント情報更新
+**カウントダウン制御**
+- **⏸️ 一時停止**: 右上の一時停止ボタン
+- **▶️ 再開**: 停止中に再生ボタンをタップ
+- **🔄 リセット**: カウントダウンを初期状態に戻す
+- **⚙️ 設定編集**: イベント設定を変更
+- **📤 シェア**: Flex Messageで現在の状態をシェア
+
+**状態の保持**
+- アプリを閉じても状態が自動保存される
+- 一時停止した状態も完全に復元される
+- 10秒ごとに自動でデータ保存
 
 ## 🛠️ 技術仕様
 
@@ -117,7 +128,10 @@ git push -u origin main
 - **グラスモーフィズム**: `backdrop-filter: blur()` + `rgba()` 背景
 - **レスポンシブ**: CSS Grid + Flexbox + Media Queries
 - **アニメーション**: CSS `@keyframes` + `transition`
+- **完全な状態管理**: 一時停止/再開/リセット対応
 - **データ永続化**: `localStorage` (ユーザー/グループ別)
+- **自動保存**: 10秒間隔で状態を自動保存
+- **状態復元**: アプリ再起動時の完全な状態復元
 
 ### ブラウザ対応
 - **LINEアプリ内ブラウザ** (必須)
@@ -173,7 +187,15 @@ addNotificationFeature() {
    - ブラウザの`localStorage`が有効か確認
    - プライベートモードではない事を確認
 
-4. **「シェアできない」**
+4. **「一時停止状態が復元されない」**
+   - 10秒以上経過してからアプリを再起動
+   - `localStorage`の容量制限を確認
+
+5. **「カウントダウンがずれる」**
+   - 一度リセットボタンを押して再計算
+   - 端末の時刻設定を確認
+
+6. **「シェアできない」**
    - LINEアプリ内でアクセスしているか確認
    - ネットワーク接続を確認
 
@@ -183,6 +205,12 @@ addNotificationFeature() {
 console.log('Context:', liff.getContext());
 console.log('Profile:', await liff.getProfile());
 console.log('Saved Data:', localStorage.getItem('countdown_' + contextType + '_' + contextId));
+
+// 状態管理の確認
+const app = new CountdownApp();
+console.log('Current Settings:', app.currentSettings);
+console.log('Is Paused:', app.isPaused);
+console.log('Paused Time:', app.pausedTime);
 ```
 
 ## 📄 ライセンス
@@ -212,7 +240,8 @@ MIT License - 自由に使用・改変・配布可能
 ---
 
 **開発者**: [unkey057](https://github.com/unkey057)  
-**バージョン**: 2.0  
-**最終更新**: 2025年7月12日
+**バージョン**: 2.1  
+**最終更新**: 2025年7月13日  
+**主要アップデート**: カウントダウン状態の完全永続化、一時停止/再開/リセット機能追加
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
