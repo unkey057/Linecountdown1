@@ -414,6 +414,69 @@
         .context-info i {
             opacity: 0.6;
         }
+        
+        .debug-panel {
+            background: rgba(255, 87, 87, 0.1);
+            border: 1px solid rgba(255, 87, 87, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            font-size: 0.8rem;
+        }
+        
+        .debug-panel h3 {
+            margin-bottom: 12px;
+            font-size: 1rem;
+            color: #ff5757;
+        }
+        
+        .debug-info {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .debug-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-debug {
+            font-size: 0.8rem;
+            padding: 8px 16px;
+            background: linear-gradient(45deg, #ff5757, #ff6b6b);
+        }
+        
+        .toggle-debug {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 87, 87, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 87, 87, 0.3);
+        }
+        
+        .toggle-debug:hover {
+            background: rgba(255, 87, 87, 0.3);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
@@ -424,6 +487,21 @@
             <div class="context-info" id="contextInfo">
                 <i class="fas fa-info-circle"></i>
                 <span id="contextText">読み込み中...</span>
+            </div>
+            
+            <div class="debug-panel" id="debugPanel" style="display: none;">
+                <h3>🔧 デバッグパネル</h3>
+                <div class="debug-info" id="debugInfo"></div>
+                <div class="debug-controls">
+                    <button class="btn btn-debug" onclick="countdownApp.showDebugInfo()">デバッグ情報表示</button>
+                    <button class="btn btn-debug" onclick="countdownApp.createTestData()">テストデータ作成</button>
+                    <button class="btn btn-debug" onclick="countdownApp.clearAllData()">全データ削除</button>
+                </div>
+                <button class="btn btn-secondary" onclick="document.getElementById('debugPanel').style.display='none'">閉じる</button>
+            </div>
+            
+            <div class="toggle-debug" onclick="document.getElementById('debugPanel').style.display='block'" title="デバッグパネルを開く">
+                🔧
             </div>
             
             <div class="form-group">
@@ -511,6 +589,8 @@
                 this.errorMessage = document.getElementById('errorMessage');
                 this.contextInfo = document.getElementById('contextInfo');
                 this.contextText = document.getElementById('contextText');
+                this.debugPanel = document.getElementById('debugPanel');
+                this.debugInfo = document.getElementById('debugInfo');
                 
                 // Countdown page elements
                 this.countdownPage = document.getElementById('countdownPage');
@@ -958,6 +1038,39 @@
             
             // Debug helper function
             addTestDataForDebugging() {\n                console.log('=== DEBUG HELPER ===');\n                \n                // Check if we can manually create test data\n                const testKey = `countdown_user_${this.userId}`;\n                const testData = {\n                    eventName: 'テストイベント',\n                    eventDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16), // 24 hours from now\n                    backgroundImage: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzY2N2VlYSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VGVzdDwvdGV4dD48L3N2Zz4=',\n                    timestamp: Date.now()\n                };\n                \n                // Only add test data if no data exists\n                if (!localStorage.getItem(testKey)) {\n                    console.log('Creating test data for debugging:', testKey, testData);\n                    localStorage.setItem(testKey, JSON.stringify(testData));\n                } else {\n                    console.log('Test data already exists');\n                }\n                \n                console.log('=== END DEBUG HELPER ===');\n            }\n            \n            // Manual debug functions (call from browser console)\n            debugLocalStorage() {\n                const keys = Object.keys(localStorage).filter(key => key.startsWith('countdown_'));\n                console.log('All countdown data:');\n                keys.forEach(key => {\n                    console.log(`${key}:`, JSON.parse(localStorage.getItem(key)));\n                });\n            }\n            \n            forceShowCountdown() {\n                console.log('Forcing countdown display...');\n                if (this.currentSettings) {\n                    this.showCountdownPage();\n                } else {\n                    console.log('No current settings available');\n                }\n            }
+            
+            // UI Debug functions
+            showDebugInfo() {
+                const debugInfo = document.getElementById('debugInfo');
+                if (!debugInfo) return;
+                
+                const info = {
+                    'User ID': this.userId,
+                    'Context Type': this.contextType,
+                    'Context ID': this.contextId,
+                    'Context Info': this.contextInfo,
+                    'Storage Key': this.getStorageKey(),
+                    'Current Settings': this.currentSettings,
+                    'LIFF Available': typeof liff !== 'undefined',
+                    'LIFF Logged In': typeof liff !== 'undefined' ? liff.isLoggedIn() : false,
+                    'LocalStorage Keys': Object.keys(localStorage).filter(k => k.startsWith('countdown_'))
+                };
+                
+                debugInfo.textContent = JSON.stringify(info, null, 2);
+            }
+            
+            createTestData() {
+                this.addTestDataForDebugging();
+                alert('テストデータを作成しました。ページをリロードしてください。');
+                location.reload();
+            }
+            
+            clearAllData() {
+                const keys = Object.keys(localStorage).filter(k => k.startsWith('countdown_'));
+                keys.forEach(key => localStorage.removeItem(key));
+                alert(`${keys.length}件のデータを削除しました。`);
+                location.reload();
+            }
         }
         
         // Initialize app when DOM is loaded
